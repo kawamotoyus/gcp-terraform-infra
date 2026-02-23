@@ -63,3 +63,49 @@ git add .
 git commit -m "feat: complete terraform and github actions setup"
 git push origin main
 ```
+
+### 🚨 トラブルシューティング（GitHub Actions実行時のエラー）
+
+**エラー1: `IAM Service Account Credentials API has not been used...`**
+- **原因:** GitHub ActionsがOIDCを利用してGCPのサービスアカウントになりすます（権限を借りる）ためのAPIが、GCPプロジェクト上で無効になっていた。
+- **対処:** 以下のコマンドをローカルで実行し、APIを有効化。
+  ```bash
+  gcloud services enable iamcredentials.googleapis.com --project gcp-lab-488301
+  ```
+
+**エラー2: `Permission 'storage.objects.list' denied on resource...`**
+- **原因:** CI/CD用のサービスアカウント（`terraform-ci-sa`）に対し、「Cloud Runを作る権限」は与えていたが、Terraformの状態（tfstate）を保存している「GCSバケットを読み書きする権限」を与え忘れていたため、`terraform init` 時にステートのロック確認ができず失敗した。
+- **対処:** `iam.tf` に `roles/storage.admin` の権限付与設定を追記。このIAM設定自体を反映するため、一度だけローカルから `terraform apply` を実行してGCPに適用した。
+
+**エラー3: `Cloud Run Admin API has not been used...`**
+- **原因:** GCP上で Cloud Run を作成・操作するための基本機能（API）が無効化されていたため。
+- **対処:** 以下のコマンドをローカルで実行し、APIを有効化。（※実行前に目的と影響を確認済）
+  ```bash
+  gcloud services enable run.googleapis.com --project gcp-lab-488301
+  ```
+
+**エラー4: `Identity and Access Management (IAM) API has not been used...`**
+- **原因:** GitHub ActionsからTerraformを実行した際、GCP上でIAMリソース（Workload Identity Pool等）を読み込み・確認するための基本APIが無効化されていたため。
+- **対処:** 以下のコマンドをローカルで実行し、APIを有効化。（※実行前に目的と影響を確認済）
+  ```bash
+  gcloud services enable iam.googleapis.com --project gcp-lab-488301
+  ```
+
+**エラー5: `Permission 'iam.workloadIdentityPools.get' denied...`**
+- **原因:** `terraform-ci-sa` に基本的なIAM変更権限（`securityAdmin`）はあったが、Workload Identityそのものやサービスアカウント自体の状態を確認する専門権限が不足していた。
+- **対処:** `iam.tf` に `roles/iam.workloadIdentityPoolAdmin` および `roles/iam.serviceAccountAdmin` を追加し、ローカルから適用。
+
+**エラー6: `Cloud Resource Manager API has not been used...`**
+- **原因:** プロジェクトのIAM設定状況を確認する際に必要な Cloud Resource Manager API が無効化されていたため。
+- **対処:** 以下のコマンドをローカルで実行し、APIを有効化。
+  ```bash
+  gcloud services enable cloudresourcemanager.googleapis.com --project gcp-lab-488301
+  ```
+
+**エラー8: `The user-provided container failed to start and listen on the port...`**
+- **原因:** Cloud Runはデフォルトでコンテナに対し「`8080` 番ポートで通信を待ち受けてね」と指示を出すが、今回利用したDockerイメージ（`nginx:latest`）は「`80` 番ポート」で通信を待つ仕様になっており、ポートの不一致で起動確認に失敗した（タイムアウトした）ため。
+- **対処:** `cloudrun.tf` に `ports { container_port = 80 }` ブロックを明示的に追記し、Nginxのポート指定と一致させた。
+
+### おまけ：完全無料枠（Always Free）の適用について
+Cloud Runの完全無料枠（毎月18万vCPU秒、36万GBメモリ秒、200万リクエスト）は、世界中のすべてのリージョンで適用されるわけではなく、**米国の特定リージョン（`us-central1`, `us-east1`, `us-west1`）のみ**が対象となる仕様がある。
+日本リージョン（`asia-northeast1`）のままでもある程度の利用なら維持費・稼働費ともに実質0円に収まるが、より安全に「1円も課金させない設計」にするため、`cloudrun.tf` の `location` 設定を `us-central1`（アイオワ）に変更した。

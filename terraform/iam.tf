@@ -54,9 +54,30 @@ resource "google_project_iam_member" "cloud_run_admin" {
   member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
 
-# 6. Cloud Run を公開設定（IAMポリシー変更）するための権限をCI/CDサービスアカウントに付与
+# 6. IAM全般やセキュリティ設定を管理するための権限を付与
 resource "google_project_iam_member" "security_admin" {
   project = "gcp-lab-488301"
   role    = "roles/iam.securityAdmin"
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+# (追加) 6-2. CI/CD自身がWorkload Identityを管理（読み取り含む）するための権限
+resource "google_project_iam_member" "workload_identity_admin" {
+  project = "gcp-lab-488301"
+  role    = "roles/iam.workloadIdentityPoolAdmin"
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+# (追加) 6-3. CI/CD自身がサービスアカウントを管理（読み取り含む）するための権限
+resource "google_project_iam_member" "service_account_admin" {
+  project = "gcp-lab-488301"
+  role    = "roles/iam.serviceAccountAdmin"
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+# 7. Terraformのステート管理（GCSバケット）にアクセスするための権限をCI/CDサービスアカウントに付与
+resource "google_project_iam_member" "storage_admin" {
+  project = "gcp-lab-488301"
+  role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
