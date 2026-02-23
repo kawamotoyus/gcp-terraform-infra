@@ -1,0 +1,99 @@
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <!-- Developer / Local Environment -->
+    <mxCell id="developer" value="Developer&#10;(Local Dev Container)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+      <mxGeometry x="80" y="320" width="60" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- GitHub / CI/CD -->
+    <mxCell id="github_group" value="GitHub (CI/CD)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+      <mxGeometry x="250" y="240" width="160" height="240" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="github_repo" value="GitHub Repository&#10;(gcp-terraform-infra)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="github_group">
+      <mxGeometry x="20" y="50" width="120" height="60" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="github_actions" value="GitHub Actions&#10;(Terraform Apply)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="github_group">
+      <mxGeometry x="20" y="140" width="120" height="60" as="geometry"/>
+    </mxCell>
+
+    <!-- Google Cloud Platform -->
+    <mxCell id="gcp_group" value="Google Cloud Platform (gcp-lab-488301)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="500" y="80" width="400" height="560" as="geometry"/>
+    </mxCell>
+
+    <!-- Workload Identity -->
+    <mxCell id="workload_identity" value="Workload Identity&#10;(Pool &amp; Provider)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="gcp_group">
+      <mxGeometry x="30" y="160" width="120" height="60" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="service_account" value="Service Account&#10;(terraform-ci-sa)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="gcp_group">
+      <mxGeometry x="30" y="260" width="120" height="60" as="geometry"/>
+    </mxCell>
+
+    <!-- GCS Backend -->
+    <mxCell id="gcs_bucket" value="Cloud Storage&#10;(tfstate Backend)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="gcp_group">
+      <mxGeometry x="250" y="160" width="100" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- Cloud Run -->
+    <mxCell id="cloud_run" value="Cloud Run&#10;(Nginx Service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="gcp_group">
+      <mxGeometry x="240" y="380" width="120" height="60" as="geometry"/>
+    </mxCell>
+
+    <!-- End Users -->
+    <mxCell id="all_users" value="All Users&#10;(Internet)" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+      <mxGeometry x="950" y="450" width="60" height="80" as="geometry"/>
+    </mxCell>
+
+    <!-- Connections -->
+    <!-- Push code -->
+    <mxCell id="edge_push" value="1. Git Push (Code)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" source="developer" target="github_repo" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Trigger -->
+    <mxCell id="edge_trigger" value="2. Trigger" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" source="github_repo" target="github_actions" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- OIDC Auth -->
+    <mxCell id="edge_oidc" value="3. OIDC Auth Token" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" source="github_actions" target="workload_identity" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="460" y="410"/>
+          <mxPoint x="460" y="270"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    
+    <!-- Impersonate -->
+    <mxCell id="edge_impersonate" value="4. Impersonate (.tf)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" source="workload_identity" target="service_account" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Manage State -->
+    <mxCell id="edge_state" value="5. Read/Write State" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;" edge="1" source="service_account" target="gcs_bucket" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Deploy -->
+    <mxCell id="edge_deploy" value="6. Deploy/Create" style="edgeStyle=elbowEdgeStyle;html=1;endArrow=block;" edge="1" source="service_account" target="cloud_run" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="680" y="430"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+
+    <!-- Web Request -->
+    <mxCell id="edge_http" value="7. HTTP Request (AllUsers)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" source="all_users" target="cloud_run" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+  </root>
+</mxGraphModel>
