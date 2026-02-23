@@ -1,16 +1,22 @@
 # Cloud Run v2サービスの定義
 resource "google_cloud_run_v2_service" "hello_nginx" {
   name     = "hello-cloud-run"
-  location = "asia-northeast1"
+  location = "us-central1" # 完全無料枠（Always Free）の対象リージョン
   project  = "gcp-lab-488301"
 
   template {
     containers {
       image = "nginx:latest"
+      
+      # Nginxはデフォルトで「80番」ポートを待ち受けるため明示的に指定
+      ports {
+        container_port = 80
+      }
+
       resources {
         limits = {
           cpu    = "1000m" # 1 vCPU
-          memory = "256Mi"
+          memory = "512Mi" # 最小要件
         }
       }
     }
