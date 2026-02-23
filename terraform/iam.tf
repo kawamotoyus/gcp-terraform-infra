@@ -60,3 +60,10 @@ resource "google_project_iam_member" "security_admin" {
   role    = "roles/iam.securityAdmin"
   member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
+
+# 7. Terraformのステート管理（GCSバケット）にアクセスするための権限をCI/CDサービスアカウントに付与
+resource "google_project_iam_member" "storage_admin" {
+  project = "gcp-lab-488301"
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}

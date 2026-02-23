@@ -63,3 +63,23 @@ git add .
 git commit -m "feat: complete terraform and github actions setup"
 git push origin main
 ```
+
+### 🚨 トラブルシューティング（GitHub Actions実行時のエラー）
+
+**エラー1: `IAM Service Account Credentials API has not been used...`**
+- **原因:** GitHub ActionsがOIDCを利用してGCPのサービスアカウントになりすます（権限を借りる）ためのAPIが、GCPプロジェクト上で無効になっていた。
+- **対処:** 以下のコマンドをローカルで実行し、APIを有効化。
+  ```bash
+  gcloud services enable iamcredentials.googleapis.com --project gcp-lab-488301
+  ```
+
+**エラー2: `Permission 'storage.objects.list' denied on resource...`**
+- **原因:** CI/CD用のサービスアカウント（`terraform-ci-sa`）に対し、「Cloud Runを作る権限」は与えていたが、Terraformの状態（tfstate）を保存している「GCSバケットを読み書きする権限」を与え忘れていたため、`terraform init` 時にステートのロック確認ができず失敗した。
+- **対処:** `iam.tf` に `roles/storage.admin` の権限付与設定を追記。このIAM設定自体を反映するため、一度だけローカルから `terraform apply` を実行してGCPに適用した。
+
+**エラー3: `Cloud Run Admin API has not been used...`**
+- **原因:** GCP上で Cloud Run を作成・操作するための基本機能（API）が無効化されていたため。
+- **対処:** 以下のコマンドをローカルで実行し、APIを有効化。（※実行前に目的と影響を確認済）
+  ```bash
+  gcloud services enable run.googleapis.com --project gcp-lab-488301
+  ```
