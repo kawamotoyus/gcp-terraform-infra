@@ -1,22 +1,25 @@
-name: 'Terraform Deploy'
+name: 'Terraform Plan & Deploy'
 
 on:
+  # Pull Requestが作成/更新されたときに「テスト（plan）」だけを走らせる
+  pull_request:
+    branches:
+      - main
+  # Pull Requestが承認（Approve）され、mainにマージされた時に「本番反映（apply）」を走らせる
   push:
     branches:
       - main
-      - master
 
 jobs:
   terraform:
-    name: 'Terraform Apply'
+    name: 'Terraform'
     runs-on: ubuntu-latest
 
-    # 【重要】GitHub ActionsからOIDC（キーレス認証）を行うために必要な権限
     permissions:
       contents: read
       id-token: write
+      pull-requests: write # PRにコメントを残す権限
 
-    # 今回はGCPフォルダ自身がリポジトリルートになったため、terraformディレクトリへの相対パスを変更
     defaults:
       run:
         working-directory: ./terraform
@@ -25,13 +28,10 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      # GCPのWorkload Identityへ認証
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          # 対象の受付窓口（Pool Provider）
           workload_identity_provider: 'projects/663984737793/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider'
-          # 利用するサービスアカウント
           service_account: 'terraform-ci-sa@gcp-lab-488301.iam.gserviceaccount.com'
 
       - name: Setup Terraform
@@ -40,9 +40,12 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      # PR作成時のみ、何が変更されるかの計画（plan）を出力する
       - name: Terraform Plan
+        if: github.event_name == 'pull_request'
         run: terraform plan -input=false
 
-      # 自動作成まで一気に進める
+      # mainへマージされた時のみ、実際に作成（apply）する
       - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -input=false
